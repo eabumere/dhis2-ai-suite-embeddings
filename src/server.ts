@@ -7,7 +7,8 @@ import axios from 'axios';
 import { loadConfig } from './config.ts';
 
 const app = express();
-const port = 3000;
+const port = Number(process.env.PORT) || 3008;
+
 
 // Enable CORS for Angular frontend
 app.use(cors({ origin: '*' }));
