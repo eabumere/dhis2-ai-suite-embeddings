@@ -6,7 +6,7 @@ import { loadConfig } from "./config.ts";
 
 // Load configuration
 const config = loadConfig();
-const { dhis2BaseUrl, dhis2Username, dhis2Password, ollamaBaseUrl, ollamaEmbeddingModel, faissIndexPath } = config;
+const { dhis2BaseUrl, dhis2ApiToken, ollamaBaseUrl, ollamaEmbeddingModel, faissIndexPath } = config;
 
 // Initialize embeddings
 const embeddings = new (class extends Embeddings {
@@ -67,7 +67,9 @@ async function fetchMetadata() {
         while (true) {
             const url = `${dhis2BaseUrl}/api/${endpoint}?page=${page}&pageSize=${pageSize}&fields=${fields}`;
             const response = await axios.get(url, {
-                auth: { username: dhis2Username, password: dhis2Password },
+                headers: {
+                    Authorization: `ApiToken ${dhis2ApiToken}`
+                }
             });
             const items = response.data[key] || [];
             allItems.push(...items.map((item: any) => ({ ...item, type: key })));

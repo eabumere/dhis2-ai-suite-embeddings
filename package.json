@@ -6,8 +6,6 @@
     "embed": "ts-node --esm src/embedDhis2Metadata.ts"
   },
   "dependencies": {
-    "@langchain/community": "^0.3.50",
-    "@langchain/core": "^0.3.70",
     "axios": "1.12.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",

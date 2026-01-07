@@ -10,10 +10,8 @@ const ConfigSchema = z.object({
     ollamaModel: z.string().optional().default("llama3.2"),
     ollamaEmbeddingModel: z.string().optional().default("nomic-embed-text"),
     dhis2BaseUrl: z.string(),
-    dhis2Username: z.string(),
-    dhis2Password: z.string(),
-    faissIndexPath: z.string().optional().default(""),
-    enableDeleteTool: z.boolean().optional().default(false),
+    dhis2ApiToken: z.string(),
+    faissIndexPath: z.string().optional().default("")
 });
 
 export const loadConfig=(importMetaUrl?: string) =>{
@@ -27,10 +25,8 @@ export const loadConfig=(importMetaUrl?: string) =>{
         ollamaModel: process.env.OLLAMA_MODEL,
         ollamaEmbeddingModel: process.env.OLLAMA_EMBEDDING_MODEL,
         dhis2BaseUrl: process.env.DHIS2_BASE_URL,
-        dhis2Username: process.env.DHIS2_USERNAME,
-        dhis2Password: process.env.DHIS2_PASSWORD,
-        faissIndexPath: process.env.FAISS_INDEX_PATH || defaultFaissIndexPath,
-        enableDeleteTool: process.env.ENABLE_DELETE_TOOL === "true",
+        dhis2ApiToken: process.env.DHIS_PAT,
+        faissIndexPath: process.env.FAISS_INDEX_PATH || defaultFaissIndexPath
     };
     return ConfigSchema.parse(env);
 }
