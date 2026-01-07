@@ -1,51 +1,20 @@
-import axios from "axios";
 import { Document } from "@langchain/core/documents";
 import { FaissStore } from "@langchain/community/vectorstores/faiss";
-import { Embeddings } from "@langchain/core/embeddings";
+import { AzureOpenAIEmbeddings } from "@langchain/openai";
 import { loadConfig } from "./config.ts";
+import axios from "axios";
 
 // Load configuration
 const config = loadConfig();
-const { dhis2BaseUrl, dhis2ApiToken, ollamaBaseUrl, ollamaEmbeddingModel, faissIndexPath } = config;
+const { dhis2BaseUrl, dhis2ApiToken, azureOpenAiEndpoint, azureOpenAiDeployment, openAiApiVersion, azureOpenAiApiKey, faissIndexPath } = config;
 
 // Initialize embeddings
-const embeddings = new (class extends Embeddings {
-    constructor() {
-        super({});
-    }
-
-    async embedDocuments(texts: string[]): Promise<number[][]> {
-        try {
-            const embeddings: number[][] = [];
-            for (const text of texts) {
-                const response = await axios.post(`${ollamaBaseUrl}/api/embeddings`, {
-                    model: ollamaEmbeddingModel,
-                    prompt: text,
-                }, {
-                    timeout: 30000, // 30-second timeout
-                });
-                embeddings.push(response.data.embedding);
-            }
-            return embeddings;
-        } catch (e) {
-            throw new Error(`Failed to embed documents: ${String(e)}`);
-        }
-    }
-
-    async embedQuery(text: string): Promise<number[]> {
-        try {
-            const response = await axios.post(`${ollamaBaseUrl}/api/embeddings`, {
-                model: ollamaEmbeddingModel,
-                prompt: text,
-            }, {
-                timeout: 30000, // 30-second timeout
-            });
-            return response.data.embedding;
-        } catch (e) {
-            throw new Error(`Failed to embed query: ${String(e)}`);
-        }
-    }
-})();
+const embeddings = new AzureOpenAIEmbeddings({
+    azureOpenAIEndpoint: azureOpenAiEndpoint,
+    azureOpenAIApiDeploymentName: azureOpenAiDeployment,
+	azureOpenAIApiVersion: openAiApiVersion,
+	azureOpenAIApiKey: azureOpenAiApiKey,
+});
 
 // Fetch DHIS2 metadata
 async function fetchMetadata() {
