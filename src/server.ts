@@ -16,15 +16,31 @@ app.use(express.json());
 // Load configuration with import.meta.url
 // @ts-ignore
 const config = loadConfig(import.meta.url);
-const { azureOpenAiEndpoint, azureOpenAiDeployment, openAiApiVersion, azureOpenAiApiKey, faissIndexPath } = config;
+// const { azureOpenAiEndpoint, azureOpenAiDeployment, openAiApiVersion, azureOpenAiApiKey, faissIndexPath } = config;
+const {
+  azureOpenAiInstanceName,
+  azureOpenAiDeployment,
+  openAiApiVersion,
+  azureOpenAiApiKey,
+  faissIndexPath
+} = config;
+
 
 // Initialize embeddings
+// const embeddings = new AzureOpenAIEmbeddings({
+//     azureOpenAIEndpoint: azureOpenAiEndpoint,
+//     azureOpenAIDeployment: azureOpenAiDeployment,
+//     openAIApiVersion: openAiApiVersion,
+//     openAIApiKey: azureOpenAiApiKey,
+// });
+
 const embeddings = new AzureOpenAIEmbeddings({
-    azureOpenAIEndpoint: azureOpenAiEndpoint,
-    azureOpenAIDeployment: azureOpenAiDeployment,
-    openAIApiVersion: openAiApiVersion,
-    openAIApiKey: azureOpenAiApiKey,
+  azureOpenAIApiInstanceName: azureOpenAiInstanceName!,
+  azureOpenAIApiDeploymentName: azureOpenAiDeployment!,
+  azureOpenAIApiVersion: openAiApiVersion!,
+  azureOpenAIApiKey: azureOpenAiApiKey!,
 });
+
 
 // Initialize FAISS vector store
 let vectorStore: FaissStore | null = null;

@@ -6,15 +6,32 @@ import axios from "axios";
 
 // Load configuration
 const config = loadConfig();
-const { dhis2BaseUrl, dhis2ApiToken, azureOpenAiEndpoint, azureOpenAiDeployment, openAiApiVersion, azureOpenAiApiKey, faissIndexPath } = config;
+// const { dhis2BaseUrl, dhis2ApiToken, azureOpenAiEndpoint, azureOpenAiDeployment, openAiApiVersion, azureOpenAiApiKey, faissIndexPath } = config;
+const {
+  dhis2BaseUrl,
+  dhis2ApiToken,
+  azureOpenAiInstanceName,
+  azureOpenAiDeployment,
+  openAiApiVersion,
+  azureOpenAiApiKey,
+  faissIndexPath
+} = config;
 
 // Initialize embeddings
+// const embeddings = new AzureOpenAIEmbeddings({
+//     azureOpenAIEndpoint: azureOpenAiEndpoint,
+//     azureOpenAIApiDeploymentName: azureOpenAiDeployment,
+// 	azureOpenAIApiVersion: openAiApiVersion,
+// 	azureOpenAIApiKey: azureOpenAiApiKey,
+// });
+
 const embeddings = new AzureOpenAIEmbeddings({
-    azureOpenAIEndpoint: azureOpenAiEndpoint,
-    azureOpenAIApiDeploymentName: azureOpenAiDeployment,
-	azureOpenAIApiVersion: openAiApiVersion,
-	azureOpenAIApiKey: azureOpenAiApiKey,
+  azureOpenAIApiInstanceName: azureOpenAiInstanceName!,
+  azureOpenAIApiDeploymentName: azureOpenAiDeployment!,
+  azureOpenAIApiVersion: openAiApiVersion!,
+  azureOpenAIApiKey: azureOpenAiApiKey!,
 });
+
 
 // Fetch DHIS2 metadata
 async function fetchMetadata() {
@@ -57,7 +74,9 @@ function buildDocuments(items: any[]): Document[] {
         const type = item.type;
         let content = "";
         if (type === "organisationUnits") {
-            content = `Name: ${item.name} | Code: ${item.code || ""} | ID: ${item.id} || ""}`;
+            content = `Name: ${item.name} | Code: ${item.code || ""} | ID: ${item.id}`;
+
+            // content = `Name: ${item.name} | Code: ${item.code || ""} | ID: ${item.id} || ""}`;
         } else {
             content = `${item.displayName} - ${item.description || ""}`;
         }

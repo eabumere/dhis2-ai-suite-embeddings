@@ -6,11 +6,7 @@
     "embed": "ts-node --esm src/embedDhis2Metadata.ts"
   },
   "dependencies": {
-<<<<<<< HEAD
     "@langchain/community": "^1.1.2",
-=======
-    "@langchain/community": "^0.2.20",
->>>>>>> d7e955ddcfdb767b777f088d8343fa5dfc64ade0
     "@langchain/core": "^1.1.11",
     "@langchain/openai": "^1.2.1",
     "axios": "1.12.0",
