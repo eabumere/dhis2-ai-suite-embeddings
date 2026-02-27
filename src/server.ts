@@ -4,6 +4,7 @@ import { FaissStore } from '@langchain/community/vectorstores/faiss';
 import { AzureOpenAIEmbeddings } from '@langchain/openai';
 // @ts-ignore
 import { loadConfig } from './config.ts';
+import { embeddings } from './embeddings.ts';
 
 const app = express();
 const port = Number(process.env.PORT) || 3008;
@@ -16,30 +17,7 @@ app.use(express.json());
 // Load configuration with import.meta.url
 // @ts-ignore
 const config = loadConfig(import.meta.url);
-// const { azureOpenAiEndpoint, azureOpenAiDeployment, openAiApiVersion, azureOpenAiApiKey, faissIndexPath } = config;
-const {
-  azureOpenAiInstanceName,
-  azureOpenAiDeployment,
-  openAiApiVersion,
-  azureOpenAiApiKey,
-  faissIndexPath
-} = config;
-
-
-// Initialize embeddings
-// const embeddings = new AzureOpenAIEmbeddings({
-//     azureOpenAIEndpoint: azureOpenAiEndpoint,
-//     azureOpenAIDeployment: azureOpenAiDeployment,
-//     openAIApiVersion: openAiApiVersion,
-//     openAIApiKey: azureOpenAiApiKey,
-// });
-
-const embeddings = new AzureOpenAIEmbeddings({
-  azureOpenAIApiInstanceName: azureOpenAiInstanceName!,
-  azureOpenAIApiDeploymentName: azureOpenAiDeployment!,
-  azureOpenAIApiVersion: openAiApiVersion!,
-  azureOpenAIApiKey: azureOpenAiApiKey!,
-});
+const { faissIndexPath } = config;
 
 
 // Initialize FAISS vector store
@@ -58,7 +36,6 @@ initializeVectorStore();
 // Search endpoint
 app.post('/api/search', async (req, res) => {
     const { query, limit = 5 } = req.body;
-    console.log('Query', query, req.body)
     if (!vectorStore) {
         return res.status(500).json({ error: `FAISS vector store not initialized. Run 'npm run embed' to create the index at ${faissIndexPath}.` });
     }
@@ -68,7 +45,6 @@ app.post('/api/search', async (req, res) => {
             content: doc.pageContent,
             metadata: doc.metadata,
         }));
-        console.log('Result', results)
         res.json(formattedResults);
     } catch (e) {
         res.status(500).json({ error: `Semantic search failed: ${String(e)}` });
