@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+.env
+.env.local
+.env.*.local
+data/faiss_index
+dist
+.git
+.gitignore
+README.md
+.nyc_output
+coverage
+.vscode
+.idea
+*.md
+Dockerfile
+.dockerignore
