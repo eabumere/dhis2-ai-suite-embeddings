@@ -1,4 +1,4 @@
-import { loadConfig } from './config.ts';
+import { loadConfig } from './config.js';
 import { AzureOpenAIEmbeddings } from '@langchain/openai';
 
 // @ts-ignore

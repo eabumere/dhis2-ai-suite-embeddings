@@ -67,7 +67,7 @@ npm run dev
 
 # Or build and run production version
 npm run build
-npm start
+node dist/server.js
 ```
 
 ### Docker Deployment

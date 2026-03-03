@@ -2,9 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import { FaissStore } from '@langchain/community/vectorstores/faiss';
 // @ts-ignore
-import { loadConfig } from './config.ts';
-import { embeddings } from './embeddings.ts';
-import { embedDhis2Metadata } from './embedDhis2Metadata.ts';
+import { loadConfig } from './config.js';
+import { embeddings } from './embeddings.js';
+import { embedDhis2Metadata } from './embedDhis2Metadata.js';
 
 const app = express();
 const port = Number(process.env.PORT) || 3008;
