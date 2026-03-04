@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { Document } from '@langchain/core/documents';
 import { FaissStore } from '@langchain/community/vectorstores/faiss';
-import { loadConfig } from './config.ts';
+import { loadConfig } from './config.js';
 import * as fs from 'node:fs';
-import { embeddings } from './embeddings.ts';
+import { embeddings } from './embeddings.js';
 
 // Load configuration
 const config = loadConfig();
@@ -191,7 +191,8 @@ async function main() {
     await embedAndStoreMetadata();
 }
 
-if (import.meta.url === new URL(import.meta.url).href) {
+// Only run if this file is executed directly (not imported)
+if (import.meta.url === `file://${process.argv[1]}`) {
     main().catch(console.error);
 }
 
