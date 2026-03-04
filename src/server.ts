@@ -33,15 +33,23 @@ let jobHistory: IndexingJob[] = [];
 
 // Initialize FAISS vector store
 let vectorStore: FaissStore | null = null;
-async function initializeVectorStore() {
+
+async function loadVectorStore(): Promise<FaissStore | null> {
     try {
-        vectorStore = await FaissStore.load(faissIndexPath, embeddings);
+        const store = await FaissStore.load(faissIndexPath, embeddings);
         console.log(`✅ Loaded FAISS vector store from ${faissIndexPath}`);
+        return store;
     } catch (e) {
         console.error(`⚠️ FAISS index not found at ${faissIndexPath}. Run indexing to create it.`);
-        vectorStore = null;
+        return null;
     }
 }
+
+async function initializeVectorStore() {
+    vectorStore = await loadVectorStore();
+}
+
+// Initial load on startup
 initializeVectorStore();
 
 // Health check endpoint

@@ -191,7 +191,8 @@ async function main() {
     await embedAndStoreMetadata();
 }
 
-if (import.meta.url === new URL(import.meta.url).href) {
+// Only run if this file is executed directly (not imported)
+if (import.meta.url === `file://${process.argv[1]}`) {
     main().catch(console.error);
 }
 
