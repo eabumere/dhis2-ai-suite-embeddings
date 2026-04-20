@@ -6,7 +6,7 @@ import { AzureOpenAIEmbeddings } from '@langchain/openai';
 import { loadConfig } from './config.ts';
 
 const app = express();
-const port = 3000;
+const port = 3001;
 
 // Enable CORS for Angular frontend
 app.use(cors({ origin: '*' }));
@@ -15,14 +15,15 @@ app.use(express.json());
 // Load configuration with import.meta.url
 // @ts-ignore
 const config = loadConfig(import.meta.url);
-const { azureOpenAiEndpoint, azureOpenAiDeployment, openAiApiVersion, azureOpenAiApiKey, faissIndexPath } = config;
+const { azureOpenAiEndpoint, azureOpenAiDeployment, openAiApiVersion, azureOpenAiApiKey, azureOpenAIApiInstanceName, faissIndexPath, scoreThreshold } = config;
 
 // Initialize embeddings
 const embeddings = new AzureOpenAIEmbeddings({
     azureOpenAIEndpoint: azureOpenAiEndpoint,
-    azureOpenAIDeployment: azureOpenAiDeployment,
+	azureOpenAIApiInstanceName: azureOpenAIApiInstanceName,
     openAIApiVersion: openAiApiVersion,
-    openAIApiKey: azureOpenAiApiKey,
+	azureOpenAIApiKey: azureOpenAiApiKey,
+	azureOpenAIApiDeploymentName: azureOpenAiDeployment
 });
 
 // Initialize FAISS vector store
@@ -41,17 +42,21 @@ initializeVectorStore();
 // Search endpoint
 app.post('/api/search', async (req, res) => {
     const { query, limit = 5 } = req.body;
-    console.log('Query', query, req.body)
     if (!vectorStore) {
         return res.status(500).json({ error: `FAISS vector store not initialized. Run 'npm run embed' to create the index at ${faissIndexPath}.` });
     }
     try {
-        const results = await vectorStore.similaritySearch(query, limit);
-        const formattedResults = results.map((doc) => ({
+        const results = await vectorStore.similaritySearchWithScore(query, limit);
+        const formattedResults = results.flatMap(r=>({
+	        pageContent: r[0].pageContent,
+	        metadata: r[0].metadata,
+	        score: r[1]
+        })).map((doc) => ({
             content: doc.pageContent,
             metadata: doc.metadata,
-        }));
-        console.log('Result', results)
+	        score: doc.score,
+        })).filter(doc => doc.score <= +scoreThreshold)
+	        .sort((a, b) => a.score - a.score);
         res.json(formattedResults);
     } catch (e) {
         res.status(500).json({ error: `Semantic search failed: ${String(e)}` });

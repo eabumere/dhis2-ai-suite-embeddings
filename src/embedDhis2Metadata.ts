@@ -6,21 +6,22 @@ import axios from "axios";
 
 // Load configuration
 const config = loadConfig();
-const { dhis2BaseUrl, dhis2ApiToken, azureOpenAiEndpoint, azureOpenAiDeployment, openAiApiVersion, azureOpenAiApiKey, faissIndexPath } = config;
+const { dhis2BaseUrl, dhis2ApiToken, azureOpenAiEndpoint, azureOpenAiDeployment, azureOpenAIApiInstanceName, openAiApiVersion, azureOpenAiApiKey, faissIndexPath } = config;
 
 // Initialize embeddings
 const embeddings = new AzureOpenAIEmbeddings({
-    azureOpenAIEndpoint: azureOpenAiEndpoint,
-    azureOpenAIApiDeploymentName: azureOpenAiDeployment,
-	azureOpenAIApiVersion: openAiApiVersion,
+	azureOpenAIEndpoint: azureOpenAiEndpoint,
+	azureOpenAIApiInstanceName: azureOpenAIApiInstanceName,
+	openAIApiVersion: openAiApiVersion,
 	azureOpenAIApiKey: azureOpenAiApiKey,
+	azureOpenAIApiDeploymentName: azureOpenAiDeployment
 });
 
 // Fetch DHIS2 metadata
 async function fetchMetadata() {
     const endpoints = [
         { endpoint: "dataElements.json", key: "dataElements", fields: "id,displayName,description" },
-        { endpoint: "indicators.json", key: "indicators", fields: "id,displayName,description" },
+        { endpoint: "indicators.json", key: "indicators", fields: "id,displayName,description,numeratorDescription,denominatorDescription" },
         { endpoint: "programIndicators.json", key: "programIndicators", fields: "id,displayName,description" },
         { endpoint: "organisationUnits.json", key: "organisationUnits", fields: "id,code,name,parent,children,level,ancestors" },
         { endpoint: "categoryOptions.json", key: "categoryOptions", fields: "id,code,name,description" },
@@ -55,14 +56,8 @@ async function fetchMetadata() {
 function buildDocuments(items: any[]): Document[] {
     return items.map((item) => {
         const type = item.type;
-        let content = "";
-        if (type === "organisationUnits") {
-            content = `Name: ${item.name} | Code: ${item.code || ""} | ID: ${item.id} || ""}`;
-        } else {
-            content = `${item.displayName} - ${item.description || ""}`;
-        }
         return new Document({
-            pageContent: content,
+            pageContent: item,
             metadata: { item_id: item.id, name: item.displayName || item.name, type },
         });
     });
