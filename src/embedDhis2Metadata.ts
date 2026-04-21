@@ -1,9 +1,8 @@
-import axios from 'axios';
-import { Document } from '@langchain/core/documents';
-import { FaissStore } from '@langchain/community/vectorstores/faiss';
-import { loadConfig } from './config.js';
-import * as fs from 'node:fs';
-import { embeddings } from './embeddings.js';
+import { Document } from "@langchain/core/documents";
+import { FaissStore } from "@langchain/community/vectorstores/faiss";
+import { AzureOpenAIEmbeddings } from "@langchain/openai";
+import { loadConfig } from "./config.ts";
+import axios from "axios";
 
 // Load configuration
 const config = loadConfig();
@@ -19,7 +18,7 @@ const embeddings = new AzureOpenAIEmbeddings({
 });
 
 // Fetch DHIS2 metadata
-async function fetchMetadata(lastUpdatedAfter?: Date) {
+async function fetchMetadata() {
     const endpoints = [
         { endpoint: "dataElements.json", key: "dataElements", fields: "id,displayName,description" },
         { endpoint: "indicators.json", key: "indicators", fields: "id,displayName,description,numeratorDescription,denominatorDescription" },
@@ -31,27 +30,19 @@ async function fetchMetadata(lastUpdatedAfter?: Date) {
 
     const allItems: any[] = [];
 
-    for (const {endpoint, key, fields} of endpoints) {
+    for (const { endpoint, key, fields } of endpoints) {
         let page = 1;
         const pageSize = 600;
 
         while (true) {
-            // Build URL with optional lastUpdated filter
-            let url = `${dhis2BaseUrl}/api/${endpoint}?page=${page}&pageSize=${pageSize}&fields=${fields}`;
-
-            // Add lastUpdated filter if timestamp is provided
-            if (lastUpdatedAfter) {
-                const isoTimestamp = lastUpdatedAfter.toISOString();
-                url += `&filter=lastUpdated:gt:${encodeURIComponent(isoTimestamp)}`;
-            }
-
+            const url = `${dhis2BaseUrl}/api/${endpoint}?page=${page}&pageSize=${pageSize}&fields=${fields}`;
             const response = await axios.get(url, {
                 headers: {
                     Authorization: `ApiToken ${dhis2ApiToken}`
                 }
             });
             const items = response.data[key] || [];
-            allItems.push(...items.map((item: any) => ({...item, type: key})));
+            allItems.push(...items.map((item: any) => ({ ...item, type: key })));
             const pager = response.data.pager || {};
             if (pager.page >= pager.pageCount || !items.length) break;
             page++;
@@ -59,59 +50,6 @@ async function fetchMetadata(lastUpdatedAfter?: Date) {
     }
 
     return allItems;
-}
-
-// Helper function to get last embed timestamp from FAISS store
-async function getLastEmbedTimestampFromStore(vectorStore: FaissStore): Promise<Date | null> {
-    try {
-        // Access the document store directly
-        const docstore = vectorStore.docstore;
-        // Convert the Map values to an array of documents
-        const allDocs = Array.from(docstore._docs.values());
-
-        const timestampDoc = allDocs.find((doc: Document) =>
-            doc.metadata.type === 'last_embed_timestamp'
-        );
-
-        if (timestampDoc && timestampDoc.metadata.timestamp) {
-            return new Date(timestampDoc.metadata.timestamp);
-        }
-        return null;
-    } catch (error) {
-        console.log('⚠️ Could not retrieve last embed timestamp:', error);
-        return null;
-    }
-}
-
-// Helper function to update last embed timestamp in FAISS store
-async function updateLastEmbedTimestampInStore(vectorStore: FaissStore): Promise<void> {
-    const timestampDoc = new Document({
-        pageContent: 'System document: Last successful embed timestamp',
-        metadata: {
-            type: 'last_embed_timestamp',
-            timestamp: new Date().toISOString()
-        }
-    });
-
-    // Try to find and delete existing timestamp document first
-    try {
-        const docstore = vectorStore.docstore;
-        // Convert the Map values to an array of documents
-        const allDocs = Array.from(docstore._docs.values());
-        const existingTimestampDoc = allDocs.find((doc: Document) =>
-            doc.metadata.type === 'last_embed_timestamp'
-        );
-
-        if (existingTimestampDoc && existingTimestampDoc.metadata.item_id) {
-            await vectorStore.delete({ids: [existingTimestampDoc.metadata.item_id]});
-        }
-    } catch (error) {
-        // If we can't find or delete the existing one, that's okay
-        console.log('ℹ️ No existing timestamp document found or could not delete');
-    }
-
-    // Add the new timestamp document
-    await vectorStore.addDocuments([timestampDoc]);
 }
 
 // Build documents from metadata
@@ -127,61 +65,15 @@ function buildDocuments(items: any[]): Document[] {
 
 // Embed and store in FAISS
 async function embedAndStoreMetadata() {
-    console.log('📦 Fetching and embedding DHIS2 metadata...');
-
-    // Get last embed timestamp if store exists
-    let lastUpdatedAfter: Date | undefined;
-    let vectorStore: FaissStore;
-
-    if (fs.existsSync(faissIndexPath)) {
-        console.log('🔄 Loading existing FAISS store for incremental update...');
-        vectorStore = await FaissStore.load(faissIndexPath, embeddings);
-
-        // Get the last embed timestamp from the store
-        const lastTimestamp = await getLastEmbedTimestampFromStore(vectorStore);
-        if (lastTimestamp) {
-            lastUpdatedAfter = lastTimestamp;
-            console.log(`🕒 Using last embed timestamp: ${lastUpdatedAfter.toISOString()}`);
-        } else {
-            console.log('ℹ️ No previous timestamp found, fetching all metadata');
-        }
-    } else {
-        console.log('🆕 Creating new FAISS store...');
-        vectorStore = new FaissStore(embeddings, {});
-    }
-
-    // Fetch metadata with optional timestamp filter
-    const metadata = await fetchMetadata(lastUpdatedAfter);
+    console.log("📦 Fetching and embedding DHIS2 metadata...");
+    const metadata = await fetchMetadata();
     const documents = buildDocuments(metadata);
 
-    // Extract the DHIS2 IDs to use as the Vector Store IDs
-    const docIds = metadata.map(item => item.id);
-
-    // If we have an existing store, delete existing versions of these IDs to prevent duplicates
-    if (fs.existsSync(faissIndexPath)) {
-        try {
-            await vectorStore.delete({ids: docIds});
-            console.log('🧹 Removed existing entries for update.');
-        } catch (e) {
-            // delete might throw if IDs don't exist; we can safely ignore in many versions
-            console.log('ℹ️ No existing records found for these IDs, proceeding with insert.');
-        }
-    }
-
-    // Add (or re-add) the documents with explicit IDs
-    await vectorStore.addDocuments(documents, {ids: docIds});
-
-    // Update the last embed timestamp
-    await updateLastEmbedTimestampInStore(vectorStore);
-
-    // Save the merged/updated state
+    // Create new FAISS store
+    const vectorStore = new FaissStore(embeddings, {});
+    await vectorStore.addDocuments(documents);
     await vectorStore.save(faissIndexPath);
-
-    if (lastUpdatedAfter) {
-        console.log(`✅ Incrementally updated ${documents.length} documents in FAISS store at ${faissIndexPath}.`);
-    } else {
-        console.log(`✅ Embedded ${documents.length} documents in FAISS store at ${faissIndexPath}.`);
-    }
+    console.log(`✅ Embedded ${documents.length} documents in FAISS store at ${faissIndexPath}.`);
 }
 
 // Main function
@@ -189,8 +81,7 @@ async function main() {
     await embedAndStoreMetadata();
 }
 
-// Only run if this file is executed directly (not imported)
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === new URL(import.meta.url).href) {
     main().catch(console.error);
 }
 
