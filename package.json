@@ -1,12 +1,17 @@
 {
   "name": "dhis2-chat-backend",
   "version": "1.0.0",
+  "description": "DHIS2 AI Embeddings API - Semantic search and metadata indexing for DHIS2",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "ts-node --esm src/server.ts",
-    "embed": "ts-node --esm src/embedDhis2Metadata.ts"
+    "dev": "ts-node --esm src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "embed": "ts-node --esm src/embedDhis2Metadata.ts",
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@langchain/community": "^0.2.20",
+    "@langchain/community": "^1.1.2",
     "@langchain/core": "^1.1.11",
     "@langchain/openai": "^1.2.1",
     "axios": "1.12.0",
@@ -14,6 +19,7 @@
     "dotenv": "^17.2.1",
     "express": "^4.21.0",
     "faiss-node": "^0.5.1",
+    "langchain": "^1.2.6",
     "path": "^0.12.7",
     "url": "^0.11.4",
     "zod": "^4.0.15"
@@ -25,5 +31,18 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.6.2"
   },
-  "type": "module"
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "dhis2",
+    "ai",
+    "embeddings",
+    "semantic-search",
+    "faiss",
+    "langchain"
+  ],
+  "author": "",
+  "license": "MIT"
 }
