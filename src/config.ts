@@ -15,9 +15,11 @@ const ConfigSchema = z.object({
     azureOpenAiInstanceName: z.string().optional(),
     openAiApiVersion: z.string().optional(),
     azureOpenAiApiKey: z.string().optional(),
+	azureOpenAIApiInstanceName: z.string().optional(),
     dhis2BaseUrl: z.string(),
     dhis2ApiToken: z.string(),
-    faissIndexPath: z.string().optional().default("")
+    faissIndexPath: z.string().optional().default(""),
+	scoreThreshold: z.string(),
 });
 
 export const loadConfig=(importMetaUrl?: string) =>{
@@ -36,9 +38,11 @@ export const loadConfig=(importMetaUrl?: string) =>{
         azureOpenAiDeployment: process.env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT,
         openAiApiVersion: process.env.OPENAI_API_VERSION,
         azureOpenAiApiKey: process.env.AZURE_OPENAI_API_KEY,
+	    azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_INSTANCE_NAME,
         dhis2BaseUrl: process.env.DHIS2_BASE_URL,
         dhis2ApiToken: process.env.DHIS_PAT,
-        faissIndexPath: process.env.FAISS_INDEX_PATH || defaultFaissIndexPath
+        faissIndexPath: process.env.FAISS_INDEX_PATH || defaultFaissIndexPath,
+	    scoreThreshold: process.env.EMBEDDING_SCORE_THRESHOLD || 0.3,
     };
     return ConfigSchema.parse(env);
 }

@@ -7,7 +7,7 @@ import { embeddings } from './embeddings.js';
 import { embedDhis2Metadata } from './embedDhis2Metadata.js';
 
 const app = express();
-const port = Number(process.env.PORT) || 3008;
+const port = 3001;
 
 // Enable CORS for Angular frontend
 app.use(cors({ origin: '*' }));
@@ -16,20 +16,16 @@ app.use(express.json());
 // Load configuration with import.meta.url
 // @ts-ignore
 const config = loadConfig(import.meta.url);
-const { faissIndexPath } = config;
+const { azureOpenAiEndpoint, azureOpenAiDeployment, openAiApiVersion, azureOpenAiApiKey, azureOpenAIApiInstanceName, faissIndexPath, scoreThreshold } = config;
 
-// Indexing job status tracking
-interface IndexingJob {
-    id: string;
-    status: 'pending' | 'running' | 'completed' | 'failed';
-    startedAt: Date;
-    completedAt?: Date;
-    error?: string;
-    documentsProcessed?: number;
-}
-
-let currentJob: IndexingJob | null = null;
-let jobHistory: IndexingJob[] = [];
+// Initialize embeddings
+const embeddings = new AzureOpenAIEmbeddings({
+    azureOpenAIEndpoint: azureOpenAiEndpoint,
+	azureOpenAIApiInstanceName: azureOpenAIApiInstanceName,
+    openAIApiVersion: openAiApiVersion,
+	azureOpenAIApiKey: azureOpenAiApiKey,
+	azureOpenAIApiDeploymentName: azureOpenAiDeployment
+});
 
 // Initialize FAISS vector store
 let vectorStore: FaissStore | null = null;
@@ -70,11 +66,6 @@ app.get('/health', (req, res) => {
 // Search endpoint
 app.post('/api/search', async (req, res) => {
     const { query, limit = 5 } = req.body;
-
-    if (!query || typeof query !== 'string') {
-        return res.status(400).json({ error: 'Query parameter is required and must be a string' });
-    }
-
     if (!vectorStore) {
         return res.status(503).json({
             error: 'FAISS vector store not initialized. Run indexing to create the index.',
@@ -83,16 +74,18 @@ app.post('/api/search', async (req, res) => {
     }
 
     try {
-        const results = await vectorStore.similaritySearch(query, Number(limit));
-        const formattedResults = results.map((doc) => ({
+        const results = await vectorStore.similaritySearchWithScore(query, limit);
+        const formattedResults = results.flatMap(r=>({
+	        pageContent: r[0].pageContent,
+	        metadata: r[0].metadata,
+	        score: r[1]
+        })).map((doc) => ({
             content: doc.pageContent,
             metadata: doc.metadata,
-        }));
-        res.json({
-            query,
-            results: formattedResults,
-            totalResults: formattedResults.length
-        });
+	        score: doc.score,
+        })).filter(doc => doc.score <= +scoreThreshold)
+	        .sort((a, b) => a.score - a.score);
+        res.json(formattedResults);
     } catch (e) {
         console.error('Search error:', e);
         res.status(500).json({ error: `Semantic search failed: ${String(e)}` });
